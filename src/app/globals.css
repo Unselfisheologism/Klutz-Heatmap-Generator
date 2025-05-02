@@ -4,7 +4,70 @@
 
 body {
   font-family: Arial, Helvetica, sans-serif;
+  @apply relative overflow-x-hidden; /* Ensure no horizontal scroll due to glows */
 }
+
+/* Add pseudo-elements for the glow */
+body::before,
+body::after {
+  content: "";
+  position: fixed; /* Fixed position to stay behind content */
+  z-index: -1; /* Place behind content */
+  border-radius: 50%;
+  filter: blur(150px); /* Increase blur for softer effect */
+  opacity: 0.25; /* Adjust opacity */
+  pointer-events: none; /* Make sure they don't interfere with interaction */
+}
+
+/* Blue glow - top left */
+body::before {
+  width: 500px; /* Larger size */
+  height: 500px;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%);
+  top: -150px; /* Adjust positioning */
+  left: -150px;
+  animation: pulseGlowBlue 10s infinite alternate ease-in-out; /* Add subtle animation */
+}
+
+/* Orange glow - bottom right */
+body::after {
+  width: 600px; /* Larger size */
+  height: 600px;
+  background: radial-gradient(circle, hsl(var(--accent) / 0.4) 0%, transparent 70%);
+  bottom: -200px; /* Adjust positioning */
+  right: -200px;
+  animation: pulseGlowOrange 12s infinite alternate ease-in-out; /* Add subtle animation */
+}
+
+/* Dark mode specific adjustments */
+.dark body::before,
+.dark body::after {
+  opacity: 0.35; /* Slightly more visible in dark mode */
+  filter: blur(180px); /* Slightly larger blur in dark mode */
+}
+
+@keyframes pulseGlowBlue {
+  from {
+    transform: scale(0.9) translate(10px, -10px);
+    opacity: 0.2;
+  }
+  to {
+    transform: scale(1.1) translate(-10px, 10px);
+    opacity: 0.3;
+  }
+}
+
+@keyframes pulseGlowOrange {
+  from {
+    transform: scale(1.1) translate(-10px, -10px);
+    opacity: 0.3;
+  }
+  to {
+    transform: scale(0.9) translate(10px, 10px);
+    opacity: 0.2;
+  }
+}
+
 
 @layer base {
   :root {
