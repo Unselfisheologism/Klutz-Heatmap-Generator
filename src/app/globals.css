@@ -8,76 +8,75 @@ body {
 
 @layer base {
   :root {
-    /* Custom Theme: Neutral Gray, Dark Gray, Teal */
-    --background: 0 0% 94.1%; /* #F0F0F0 */
-    --foreground: 0 0% 20%; /* #333333 */
+    /* Custom Theme: Orange and Blue */
+    --background: 0 0% 98%; /* Slightly lighter white */
+    --foreground: 240 10% 3.9%; /* Very dark blue-gray */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%; /* #333333 */
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%; /* #333333 */
-    --primary: 180 100% 25.1%; /* #008080 Teal */
-    --primary-foreground: 0 0% 98%; /* Light color for text on primary */
-    --secondary: 0 0% 90%; /* Slightly darker gray */
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 90%; /* Slightly darker gray */
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 180 100% 25.1%; /* #008080 Teal */
-    --accent-foreground: 0 0% 98%; /* Light color for text on accent */
-    --destructive: 0 84.2% 60.2%; /* Red HSL for destructive/boring */
-    --destructive-foreground: 0 0% 98%; /* Light text for destructive */
-    --border: 0 0% 85%; /* Adjusted border */
-    --input: 0 0% 85%; /* Adjusted input */
-    --ring: 180 100% 25.1%; /* #008080 Teal */
-    --chart-1: 180 100% 35%; /* Teal variations for charts */
-    --chart-2: 180 80% 45%;
-    --chart-3: 180 60% 55%;
-    --chart-4: 180 40% 65%;
-    --chart-5: 180 20% 75%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 217 91% 60%; /* Blue */
+    --primary-foreground: 210 40% 98%; /* Light blue-white */
+    --secondary: 240 4.8% 95.9%; /* Very light gray */
+    --secondary-foreground: 240 5.9% 10%; /* Dark gray */
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%; /* Medium gray */
+    --accent: 25 95% 53%; /* Orange */
+    --accent-foreground: 60 9.1% 97.8%; /* Off-white */
+    --destructive: 0 84.2% 60.2%; /* Red HSL for destructive */
+    --destructive-foreground: 60 9.1% 97.8%;
+    --border: 240 5.9% 90%; /* Light gray border */
+    --input: 240 5.9% 90%;
+    --ring: 217 91% 60%; /* Blue */
+    --chart-1: 217 91% 60%; /* Blue */
+    --chart-2: 25 95% 53%; /* Orange */
+    --chart-3: 217 91% 70%; /* Lighter Blue */
+    --chart-4: 25 95% 63%; /* Lighter Orange */
+    --chart-5: 217 91% 80%; /* Even Lighter Blue */
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 0 0% 98%; /* Match overall background */
+    --sidebar-foreground: 240 10% 3.9%; /* Match overall foreground */
+    --sidebar-primary: 217 91% 60%; /* Blue */
+    --sidebar-primary-foreground: 210 40% 98%; /* Light blue-white */
+    --sidebar-accent: 25 95% 90%; /* Very light orange */
+    --sidebar-accent-foreground: 25 95% 20%; /* Dark orange for text */
+    --sidebar-border: 240 5.9% 90%; /* Light gray border */
+    --sidebar-ring: 217 91% 60%; /* Blue */
   }
 
-  /* Keep dark theme variables as they were, or adjust if needed */
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
+    --background: 240 10% 3.9%; /* Very dark blue-gray */
+    --foreground: 0 0% 98%; /* Near white */
+    --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
+    --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 180 100% 35%; /* Darker Teal for dark mode */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 14.9%;
+    --primary: 217 91% 65%; /* Lighter Blue for dark mode contrast */
+    --primary-foreground: 210 40% 9.8%; /* Very dark blue */
+    --secondary: 240 3.7% 15.9%; /* Dark gray */
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 180 100% 35%; /* Darker Teal for dark mode */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%; /* Darker Red for dark mode */
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%; /* Medium-light gray */
+    --accent: 25 95% 58%; /* Lighter Orange for dark mode contrast */
+    --accent-foreground: 48 9.1% 9.8%; /* Very dark brown */
+    --destructive: 0 72% 51%; /* Slightly less intense red */
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 180 100% 45%; /* Adjusted ring for dark */
-    --chart-1: 180 100% 35%;
-    --chart-2: 180 80% 45%;
-    --chart-3: 180 60% 55%;
-    --chart-4: 180 40% 65%;
-    --chart-5: 180 20% 75%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217 91% 65%; /* Lighter Blue */
+    --chart-1: 217 91% 65%; /* Lighter Blue */
+    --chart-2: 25 95% 58%; /* Lighter Orange */
+    --chart-3: 217 91% 55%; /* Blue */
+    --chart-4: 25 95% 48%; /* Orange */
+    --chart-5: 217 91% 45%; /* Darker Blue */
+    --sidebar-background: 240 10% 3.9%; /* Match overall background */
+    --sidebar-foreground: 0 0% 98%; /* Match overall foreground */
+    --sidebar-primary: 217 91% 65%; /* Lighter Blue */
+    --sidebar-primary-foreground: 210 40% 9.8%; /* Very dark blue */
+    --sidebar-accent: 25 95% 20%; /* Very dark orange */
+    --sidebar-accent-foreground: 25 95% 80%; /* Lighter orange for text */
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 217 91% 65%; /* Lighter Blue */
   }
 }
 
@@ -92,9 +91,9 @@ body {
 
 /* Styles for text heatmap */
 .heatmap-engaging {
-  /* Green for engaging */
-  background-color: hsl(120 70% 90% / 0.7); /* Light green background */
-  color: hsl(120 60% 30%); /* Darker green text */
+  /* Green for engaging - Using Primary Color (Blue) */
+  background-color: hsl(var(--primary) / 0.2); /* Light blue background */
+  color: hsl(var(--primary)); /* Blue text */
   padding: 0.1em 0.3em;
   border-radius: 0.25em;
   margin: 0 0.1em;
@@ -103,8 +102,21 @@ body {
   display: inline; /* Keep inline behavior for text flow */
 }
 
+.heatmap-medium {
+   /* Yellow/Orange for medium - Using Accent Color (Orange) */
+  background-color: hsl(var(--accent) / 0.2); /* Light orange background */
+  color: hsl(var(--accent)); /* Orange text */
+   padding: 0.1em 0.3em;
+  border-radius: 0.25em;
+  margin: 0 0.1em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  display: inline;
+}
+
+
 .heatmap-boring {
-   /* Red for boring */
+   /* Red for boring - Using Destructive Color */
   background-color: hsl(var(--destructive) / 0.2); /* Light red background using destructive HSL variable */
   color: hsl(var(--destructive)); /* Red text using destructive HSL variable */
   padding: 0.1em 0.3em;
@@ -117,6 +129,7 @@ body {
 
 /* Ensure spans behave correctly and wrap */
 .heatmap-engaging,
+.heatmap-medium, /* Added medium */
 .heatmap-boring {
   /* display: inline; is now included above */
 }

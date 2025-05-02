@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 interface TextSegment {
   text: string;
-  engagement: 'engaging' | 'boring' | 'neutral';
+  engagement: 'engaging' | 'medium' | 'boring' | 'neutral'; // Added 'medium'
 }
 
 interface TextHeatmapProps {
@@ -20,6 +20,8 @@ export function TextHeatmap({ segments }: TextHeatmapProps) {
     switch (engagement) {
       case 'engaging':
         return 'heatmap-engaging'; // Defined in globals.css
+      case 'medium':
+        return 'heatmap-medium'; // Added case for medium
       case 'boring':
         return 'heatmap-boring'; // Defined in globals.css
       case 'neutral':

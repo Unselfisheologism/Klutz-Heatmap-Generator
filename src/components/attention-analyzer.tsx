@@ -24,7 +24,7 @@ type InputMode = 'file' | 'text';
 // Define a type for structured text analysis results
 interface TextSegment {
     text: string;
-    engagement: 'engaging' | 'boring' | 'neutral'; // Add 'neutral' or adjust as needed
+    engagement: 'engaging' | 'medium' | 'boring' | 'neutral'; // Add 'medium'
 }
 
 interface ImageAnalysisResult {
@@ -61,12 +61,14 @@ export function AttentionAnalyzer() {
     if (typeof window !== 'undefined' && window.puter) {
       setPuter(window.puter);
     } else {
+      // Retry mechanism in case Puter.js loads after initial check
       const interval = setInterval(() => {
         if (typeof window !== 'undefined' && window.puter) {
           setPuter(window.puter);
           clearInterval(interval);
         }
       }, 100);
+      // Cleanup interval on component unmount
       return () => clearInterval(interval);
     }
   }, []);
@@ -75,7 +77,7 @@ export function AttentionAnalyzer() {
     setUploadedFile(null);
     setFileType(null);
     setFilePreview(null);
-    // Don't reset textInput here, user might switch modes
+    // Keep textInput unless fully resetting
     setAnalysisResult(null);
     setIsLoading(false);
     setError(null);
@@ -93,55 +95,73 @@ export function AttentionAnalyzer() {
 
    // Helper function to parse the AI's text analysis response
    const parseTextAnalysis = (rawResponse: string): TextSegment[] => {
-    // This is a placeholder parsing logic.
-    // It assumes the AI returns segments marked like:
+    // Updated parsing logic to include MEDIUM
+    // Assumes AI returns segments marked like:
     // [ENGAGING]This part is great![/ENGAGING]
+    // [MEDIUM]This part is okay.[/MEDIUM]
     // [BORING]This part needs work.[/BORING]
     // This part is neutral.
-    // You'll need to adapt this based on the actual output format from your Puter.js AI call.
     const segments: TextSegment[] = [];
-    const regex = /\[(ENGAGING|BORING)\]([\s\S]*?)\[\/\1\]|([^\[]+)/g;
-    let match;
+    // Regex improved to handle nested structures better and multiple lines within tags
+    const regex = /\[(ENGAGING|MEDIUM|BORING)\]([\s\S]*?)\[\/\1\]|([\s\S]+?(?=\[(?:ENGAGING|MEDIUM|BORING)\]|$))/g;
     let lastIndex = 0;
 
-    while ((match = regex.exec(rawResponse)) !== null) {
-      // Add any neutral text before this match
-      if (match.index > lastIndex) {
-        segments.push({
-          text: rawResponse.substring(lastIndex, match.index).trim(),
-          engagement: 'neutral',
-        });
-      }
+    // Clean up potential artifacts or explanations before parsing the core structure
+    // This is a heuristic; might need refinement based on actual AI output variations.
+    let structuredContent = rawResponse.split("Explanation:")[0] || rawResponse; // Attempt to remove trailing explanations
+    structuredContent = structuredContent.replace(/## \w+ Attention Areas##\n/g, ''); // Remove potential markdown headers
 
-      if (match[1] && match[2]) { // Matched [ENGAGING]...[/ENGAGING] or [BORING]...[/BORING]
-        segments.push({
-          text: match[2].trim(),
-          engagement: match[1] === 'ENGAGING' ? 'engaging' : 'boring',
-        });
-      } else if (match[3]) { // Matched neutral text segment
-        // Only add if it's not just whitespace, handle potential empty matches
-         const neutralText = match[3].trim();
-         if (neutralText) {
-            segments.push({ text: neutralText, engagement: 'neutral' });
-         }
-      }
-      lastIndex = regex.lastIndex;
+    let match;
+    while ((match = regex.exec(structuredContent)) !== null) {
+        const fullMatch = match[0];
+        const currentIndex = match.index;
+
+        // Capture any neutral text before the current match, but only if it hasn't been captured already
+        if (currentIndex > lastIndex) {
+            const neutralText = structuredContent.substring(lastIndex, currentIndex).trim();
+            if (neutralText) {
+                segments.push({ text: neutralText, engagement: 'neutral' });
+            }
+        }
+
+        if (match[1] && match[2]) { // Matched tagged segment
+            let engagementLevel: TextSegment['engagement'] = 'neutral';
+            if (match[1] === 'ENGAGING') {
+                engagementLevel = 'engaging';
+            } else if (match[1] === 'MEDIUM') {
+                engagementLevel = 'medium';
+            } else if (match[1] === 'BORING') {
+                engagementLevel = 'boring';
+            }
+            const taggedText = match[2].trim();
+            if (taggedText) {
+                segments.push({ text: taggedText, engagement: engagementLevel });
+            }
+        } else if (match[3]) { // Matched potentially neutral text segment
+            const neutralText = match[3].trim();
+            if (neutralText) {
+                 segments.push({ text: neutralText, engagement: 'neutral' });
+            }
+        }
+
+        lastIndex = currentIndex + fullMatch.length; // Update lastIndex to the end of the current match
+        regex.lastIndex = lastIndex; // Ensure regex continues from the correct position
     }
 
-    // Add any remaining neutral text after the last match
-    if (lastIndex < rawResponse.length) {
-      segments.push({
-        text: rawResponse.substring(lastIndex).trim(),
-        engagement: 'neutral',
-      });
+    // Capture any remaining neutral text after the last match
+    if (lastIndex < structuredContent.length) {
+        const remainingText = structuredContent.substring(lastIndex).trim();
+        if (remainingText) {
+            segments.push({ text: remainingText, engagement: 'neutral' });
+        }
     }
 
-    // If parsing fails or returns empty, return the whole text as neutral
-    if (segments.length === 0 && rawResponse.trim()) {
-      return [{ text: rawResponse.trim(), engagement: 'neutral' }];
+    // If parsing yields nothing but the original text is non-empty, treat it all as neutral
+    if (segments.length === 0 && structuredContent.trim()) {
+        return [{ text: structuredContent.trim(), engagement: 'neutral' }];
     }
 
-    // Filter out potential empty segments added during parsing
+    // Filter out any empty segments that might have slipped through
     return segments.filter(s => s.text.length > 0);
    };
 
@@ -179,7 +199,8 @@ export function AttentionAnalyzer() {
       resetState(); // Reset everything including file input
       return;
     }
-    if (!isLikelyText && type === 'text') {
+    // Warn but allow potentially unsupported text types
+    if (type === 'text' && !isLikelyText) {
         console.warn(`Attempting to analyze potentially unsupported text type: ${selectedFile.type}`);
         toast({ title: 'Potentially Unsupported Type', description: `Analysis might work best with standard image or text formats.`, variant: 'default' });
     }
@@ -260,7 +281,7 @@ export function AttentionAnalyzer() {
                    }
                  });
                  // Need to break here because getAsString is async
-                 if (foundContent) break;
+                 if (foundContent) break; // Exit loop once text is handled
              }
         }
     }
@@ -295,9 +316,10 @@ export function AttentionAnalyzer() {
      if (inputMode !== 'file') return;
     event.preventDefault();
     event.stopPropagation();
+    // Check if the leave event target is outside the current drop zone
     if ((event.relatedTarget as Node)?.contains && !(event.currentTarget as Node).contains(event.relatedTarget as Node)) {
         setIsDragging(false);
-    } else if (!event.relatedTarget) {
+    } else if (!event.relatedTarget) { // Handle leaving the browser window entirely
         setIsDragging(false);
     }
   }, [inputMode]);
@@ -399,8 +421,8 @@ export function AttentionAnalyzer() {
               textContent = textInput;
           }
 
-          // Update the prompt to request specific formatting for parsing
-          prompt = `Analyze the following text content. Identify sentences or sections that are particularly engaging or attention-grabbing, and sections that might be considered boring or less engaging. Explain your reasoning for each. Format the response by wrapping engaging parts in [ENGAGING]...[/ENGAGING] and boring parts in [BORING]...[/BORING]. Leave neutral parts as plain text. Text Content:\n\n"${textContent}"`;
+          // Update the prompt to request specific formatting for parsing, including MEDIUM
+          prompt = `Analyze the following text content. Identify sentences or sections that are particularly engaging (high attention), moderately engaging (medium attention), and sections that might be considered boring or less engaging (low attention). Explain your reasoning for each category briefly if possible, but prioritize the tagging. Format the response ONLY by wrapping highly engaging parts in [ENGAGING]...[/ENGAGING], moderately engaging parts in [MEDIUM]...[/MEDIUM], and boring parts in [BORING]...[/BORING]. Leave neutral parts as plain text. Do NOT include any other text like introductions, summaries, or explanations outside of the tagged segments. Text Content:\n\n"${textContent}"`;
            analysisInput = prompt; // Only prompt needed for text
            options.model = 'gpt-4o'; // Use gpt-4o for text analysis
       }
@@ -574,7 +596,8 @@ export function AttentionAnalyzer() {
                         onChange={(e) => {
                             setTextInput(e.target.value);
                             if (e.target.value) {
-                                resetState(); // Clear file state if user types text
+                                // If user starts typing, clear any file-related state
+                                resetState();
                             }
                             setAnalysisResult(null); // Clear analysis if text changes
                             setAnalysisMode(null);
@@ -629,14 +652,16 @@ export function AttentionAnalyzer() {
               <>
                 <h3 className="font-semibold mb-2 text-lg">Engagement Heatmap:</h3>
                 <TextHeatmap segments={analysisResult.segments} />
-                <h3 className="font-semibold mt-4 mb-2 text-lg">AI Explanation:</h3>
-                 {/* Display raw explanation (adapt if AI separates explanation) */}
-                <Textarea
-                    readOnly
-                    value={analysisResult.rawResponse} // Display the raw response which should contain explanations
-                    className="border rounded-lg p-4 bg-card text-card-foreground min-h-[100px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm"
-                    aria-label="AI analysis explanation"
-                />
+                 {/* Optionally display raw response for debugging or if parsing fails */}
+                 {/*
+                 <h3 className="font-semibold mt-4 mb-2 text-lg">Raw AI Response:</h3>
+                 <Textarea
+                     readOnly
+                     value={analysisResult.rawResponse}
+                     className="border rounded-lg p-4 bg-muted text-muted-foreground min-h-[100px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-xs"
+                     aria-label="Raw AI analysis explanation"
+                 />
+                 */}
               </>
             )}
 
