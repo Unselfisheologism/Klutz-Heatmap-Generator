@@ -42,29 +42,29 @@ body::after {
 /* Dark mode specific adjustments */
 .dark body::before,
 .dark body::after {
-  opacity: 0.35; /* Slightly more visible in dark mode */
-  filter: blur(180px); /* Slightly larger blur in dark mode */
+  opacity: 0.2; /* Decreased opacity for subtlety */
+  filter: blur(200px); /* Increased blur for softer glow in dark mode */
 }
 
 @keyframes pulseGlowBlue {
   from {
     transform: scale(0.9) translate(10px, -10px);
-    opacity: 0.2;
+    opacity: 0.15; /* Adjusted animation opacity */
   }
   to {
     transform: scale(1.1) translate(-10px, 10px);
-    opacity: 0.3;
+    opacity: 0.25; /* Adjusted animation opacity */
   }
 }
 
 @keyframes pulseGlowOrange {
   from {
     transform: scale(1.1) translate(-10px, -10px);
-    opacity: 0.3;
+    opacity: 0.25; /* Adjusted animation opacity */
   }
   to {
     transform: scale(0.9) translate(10px, 10px);
-    opacity: 0.2;
+    opacity: 0.15; /* Adjusted animation opacity */
   }
 }
 
