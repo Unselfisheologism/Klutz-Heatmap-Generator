@@ -23,8 +23,8 @@ body {
     --muted-foreground: 0 0% 45.1%;
     --accent: 180 100% 25.1%; /* #008080 Teal */
     --accent-foreground: 0 0% 98%; /* Light color for text on accent */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%; /* Red HSL for destructive/boring */
+    --destructive-foreground: 0 0% 98%; /* Light text for destructive */
     --border: 0 0% 85%; /* Adjusted border */
     --input: 0 0% 85%; /* Adjusted input */
     --ring: 180 100% 25.1%; /* #008080 Teal */
@@ -60,7 +60,7 @@ body {
     --muted-foreground: 0 0% 63.9%;
     --accent: 180 100% 35%; /* Darker Teal for dark mode */
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 30.6%; /* Darker Red for dark mode */
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
@@ -92,27 +92,31 @@ body {
 
 /* Styles for text heatmap */
 .heatmap-engaging {
-  background-color: hsl(var(--primary) / 0.7); /* Teal with some transparency */
-  color: hsl(var(--primary-foreground)); /* White */
+  /* Green for engaging */
+  background-color: hsl(120 70% 90% / 0.7); /* Light green background */
+  color: hsl(120 60% 30%); /* Darker green text */
   padding: 0.1em 0.3em;
   border-radius: 0.25em;
   margin: 0 0.1em;
   box-decoration-break: clone; /* Ensures background covers line breaks nicely */
   -webkit-box-decoration-break: clone;
+  display: inline; /* Keep inline behavior for text flow */
 }
 
 .heatmap-boring {
-  background-color: hsl(var(--secondary) / 0.6); /* Light Grey with some transparency */
-  color: hsl(var(--secondary-foreground)); /* Dark Grey */
+   /* Red for boring */
+  background-color: hsl(var(--destructive) / 0.2); /* Light red background using destructive HSL variable */
+  color: hsl(var(--destructive)); /* Red text using destructive HSL variable */
   padding: 0.1em 0.3em;
   border-radius: 0.25em;
   margin: 0 0.1em;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  display: inline;
 }
 
 /* Ensure spans behave correctly and wrap */
 .heatmap-engaging,
 .heatmap-boring {
-  display: inline; /* Keep inline behavior for text flow */
+  /* display: inline; is now included above */
 }
