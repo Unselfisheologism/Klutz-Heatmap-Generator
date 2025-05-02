@@ -8,7 +8,7 @@ body {
 
 @layer base {
   :root {
-    /* Custom Theme: Orange and Blue (Revised with tints) */
+    /* Custom Theme: Orange and Blue (Slightly More Orange) */
     --background: 0 0% 98%; /* Slightly lighter white */
     --foreground: 240 10% 3.9%; /* Very dark blue-gray */
     --card: 0 0% 100%;
@@ -19,8 +19,8 @@ body {
     --primary-foreground: 210 40% 98%; /* Light blue-white */
     --secondary: 217 30% 96%; /* Very light blue tint */
     --secondary-foreground: 217 30% 30%; /* Dark grayish blue */
-    --muted: 25 50% 96%; /* Very light orange tint */
-    --muted-foreground: 25 50% 40%; /* Medium brownish orange */
+    --muted: 25 60% 95%; /* More saturated, slightly darker light orange tint */
+    --muted-foreground: 25 55% 35%; /* Darker brownish orange for contrast */
     --accent: 25 95% 53%; /* Orange */
     --accent-foreground: 60 9.1% 97.8%; /* Off-white */
     --destructive: 0 84.2% 60.2%; /* Red HSL for destructive */
@@ -45,7 +45,7 @@ body {
   }
 
   .dark {
-    /* Dark Mode with subtle Blue/Orange Tints */
+    /* Dark Mode with subtle Blue/Orange Tints (Slightly More Orange) */
     --background: 240 10% 3.9%; /* Very dark blue-gray */
     --foreground: 0 0% 98%; /* Near white */
     --card: 240 10% 3.9%;
@@ -56,8 +56,8 @@ body {
     --primary-foreground: 210 40% 9.8%; /* Very dark blue */
     --secondary: 217 20% 15%; /* Dark blue-gray tint */
     --secondary-foreground: 217 20% 90%; /* Light blue-gray */
-    --muted: 25 30% 15%; /* Dark brownish orange tint */
-    --muted-foreground: 25 30% 70%; /* Medium-light orange-gray */
+    --muted: 25 40% 18%; /* More saturated, slightly lighter dark orange tint */
+    --muted-foreground: 25 40% 75%; /* Adjusted orange-gray for contrast */
     --accent: 25 95% 58%; /* Lighter Orange for dark mode contrast */
     --accent-foreground: 48 9.1% 9.8%; /* Very dark brown */
     --destructive: 0 72% 51%; /* Slightly less intense red */
