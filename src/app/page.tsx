@@ -9,7 +9,7 @@ export default function Home() {
         <AttentionAnalyzer />
       </main>
       <footer className="py-4 text-center text-sm text-muted-foreground">
-        Built with Next.js and Genkit AI
+        Built with Next.js and Puter.js AI {/* Updated footer text */}
       </footer>
     </div>
   );
