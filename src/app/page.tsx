@@ -11,7 +11,7 @@ export default function Home() {
         <AttentionAnalyzer />
       </main>
       <footer className="py-4 text-center text-xs sm:text-sm text-muted-foreground z-10"> {/* Ensure footer content has higher z-index, responsive text size */}
-        Built with Next.js and Puter.js AI {/* Updated footer text */}
+        © 2025 Klutz. All rights reserved. {/* Updated footer text */}
       </footer>
     </div>
   );
