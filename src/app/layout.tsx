@@ -1,22 +1,24 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+// Removed Geist font import as it's causing errors and likely not available via next/font/google
+// import { Geist_Sans as Geist, Geist_Mono as GeistMono } from 'next/font/google';
 import Script from 'next/script'; // Import Next.js Script component
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+// Removed Geist font instantiation
+// const geistSans = Geist({
+//   variable: '--font-geist-sans',
+//   subsets: ['latin'],
+// });
+//
+// const geistMono = GeistMono({
+//   variable: '--font-geist-mono',
+//   subsets: ['latin'],
+// });
 
 export const metadata: Metadata = {
-  title: 'Attention Insights',
-  description: 'Generate engagement heatmaps for images and text using Puter.js AI.', // Updated description
+  title: 'Klutz Content Heatmap', // Updated title
+  description: 'Generate engagement heatmaps for images and text using Puter.js AI.',
 };
 
 export default function RootLayout({
@@ -31,7 +33,8 @@ export default function RootLayout({
         {/* Add Puter.js script using Next.js Script component */}
         <Script src="https://js.puter.com/v2/" strategy="beforeInteractive" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      {/* Removed Geist font variables from className */}
+      <body className={`antialiased`}>
         {children}
         <Toaster />
       </body>
