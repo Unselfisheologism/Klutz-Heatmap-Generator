@@ -520,45 +520,87 @@ Keep the descriptive summary separate from the coordinate section.`;
     }
   };
 
+  // Function to draw heatmap on canvas and trigger download
+    const downloadImageWithHeatmap = () => {
+        if (analysisResult?.type !== 'image' || !filePreview || !analysisResult.result.attentionAreas) {
+            toast({ title: 'Download Error', description: 'No image or heatmap data available to download.', variant: 'destructive' });
+            return;
+        }
+
+        const img = new window.Image(); // Use window.Image for explicit global scope
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+
+            if (!ctx) {
+                toast({ title: 'Canvas Error', description: 'Could not create canvas context for download.', variant: 'destructive' });
+                return;
+            }
+
+            // Draw the original image
+            ctx.drawImage(img, 0, 0);
+
+            // Draw the heatmap bounding boxes
+            analysisResult.result.attentionAreas?.forEach(box => {
+                const x = (box.xMin / 100) * canvas.width;
+                const y = (box.yMin / 100) * canvas.height;
+                const width = ((box.xMax - box.xMin) / 100) * canvas.width;
+                const height = ((box.yMax - box.yMin) / 100) * canvas.height;
+
+                ctx.strokeStyle = box.label === 'high' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'; // Blue or Red
+                ctx.fillStyle = box.label === 'high' ? 'hsla(var(--primary) / 0.3)' : 'hsla(var(--destructive) / 0.3)'; // Semi-transparent fill
+                ctx.lineWidth = 3; // Adjust line width as needed
+                ctx.strokeRect(x, y, width, height);
+                ctx.fillRect(x, y, width, height); // Fill the rectangle
+            });
+
+            // Trigger download
+            const link = document.createElement('a');
+            link.download = `heatmap_${uploadedFile?.name || 'image'}.png`; // Use uploaded filename
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            toast({ title: 'Heatmap image download started!' });
+        };
+        img.onerror = () => {
+            toast({ title: 'Image Load Error', description: 'Could not load the image for download.', variant: 'destructive' });
+        };
+        img.src = filePreview; // The data URI stored in state
+    };
+
 
   const handleDownload = () => {
     if (!analysisResult) return;
 
-    const link = document.createElement('a');
-    const fileExtension = 'txt';
-    let originalFileName = 'analysis';
-    let contentToSave = '';
+     if (analysisResult.type === 'image') {
+         downloadImageWithHeatmap(); // Call the dedicated image download function
+     } else if (analysisResult.type === 'text') {
+        // Existing logic for text analysis download
+        const link = document.createElement('a');
+        const fileExtension = 'txt';
+        let originalFileName = 'analysis';
+        let contentToSave = '';
 
-    if (analysisResult.type === 'text') {
         contentToSave = analysisResult.rawResponse; // Save the raw AI response for text
-         if (inputMode === 'file' && uploadedFile) {
-             originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'file_analysis';
-         } else if (inputMode === 'text') {
-             originalFileName = 'text_analysis';
-         }
-    } else if (analysisResult.type === 'image') {
-        // Include coordinates in the downloaded text file for images
-         contentToSave = `Description:\n${analysisResult.result.description}\n\nAttention Areas:\n`;
-         analysisResult.result.attentionAreas?.forEach(area => {
-             contentToSave += `${area.label === 'high' ? 'High' : 'Low'} Attention Box: [${area.xMin}%, ${area.yMin}%, ${area.xMax}%, ${area.yMax}%]\n`;
-         });
-
         if (inputMode === 'file' && uploadedFile) {
-            originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'image_analysis';
+            originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'file_analysis';
+        } else if (inputMode === 'text') {
+            originalFileName = 'text_analysis';
         }
-    }
 
-
-    link.download = `attention_${originalFileName}.${fileExtension}`;
-
-    const blob = new Blob([contentToSave], { type: 'text/plain' });
-    link.href = URL.createObjectURL(blob);
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-    toast({ title: 'Download started!' });
+        link.download = `attention_${originalFileName}.${fileExtension}`;
+        const blob = new Blob([contentToSave], { type: 'text/plain' });
+        link.href = URL.createObjectURL(blob);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        toast({ title: 'Analysis text download started!' });
+     }
   };
 
   const isAnalyzeDisabled = isLoading || !puter || (inputMode === 'file' && !uploadedFile) || (inputMode === 'text' && textInput.trim().length === 0);
@@ -705,7 +747,7 @@ Keep the descriptive summary separate from the coordinate section.`;
             </div>
              <Button onClick={handleDownload} variant="outline" size="sm">
               <Download className="mr-2 h-4 w-4" />
-              Download Analysis
+                Download {analysisResult.type === 'image' ? 'Heatmap Image' : 'Analysis Text'}
             </Button>
           </CardHeader>
           <CardContent>
@@ -714,17 +756,17 @@ Keep the descriptive summary separate from the coordinate section.`;
                  <Image src={filePreview} alt="Analyzed Image" width={500} height={500} style={{ width: '100%', height: 'auto', objectFit: 'contain' }} data-ai-hint="uploaded image analysis" />
                  {/* Render bounding boxes */}
                  {analysisResult.result.attentionAreas?.map((box, index) => {
-                     const style: React.CSSProperties = {
-                         position: 'absolute',
-                         left: `${box.xMin}%`,
-                         top: `${box.yMin}%`,
-                         width: `${box.xMax - box.xMin}%`,
-                         height: `${box.yMax - box.yMin}%`,
-                         border: `2px solid ${box.label === 'high' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'}`, // Blue for high, Red for low
-                         backgroundColor: box.label === 'high' ? 'hsla(var(--primary) / 0.2)' : 'hsla(var(--destructive) / 0.2)', // Semi-transparent fill
-                         boxShadow: '0 0 5px rgba(0, 0, 0, 0.5)', // Add a subtle shadow for visibility
-                         pointerEvents: 'none', // Ensure boxes don't interfere with image interaction
-                     };
+                    const style: React.CSSProperties = {
+                        position: 'absolute',
+                        left: `${box.xMin}%`,
+                        top: `${box.yMin}%`,
+                        width: `${box.xMax - box.xMin}%`,
+                        height: `${box.yMax - box.yMin}%`,
+                        border: `2px solid ${box.label === 'high' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'}`, // Blue for high, Red for low
+                        backgroundColor: box.label === 'high' ? 'hsla(var(--primary) / 0.3)' : 'hsla(var(--destructive) / 0.3)', // Semi-transparent fill - Increased opacity slightly
+                        boxShadow: '0 0 5px rgba(0, 0, 0, 0.5)', // Add a subtle shadow for visibility
+                        pointerEvents: 'none', // Ensure boxes don't interfere with image interaction
+                    };
                      return <div key={index} style={style} />;
                  })}
               </div>
@@ -772,3 +814,4 @@ Keep the descriptive summary separate from the coordinate section.`;
     </div>
   );
 }
+
