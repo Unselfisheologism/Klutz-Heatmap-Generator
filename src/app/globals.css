@@ -8,7 +8,7 @@ body {
 
 @layer base {
   :root {
-    /* Custom Theme: Orange and Blue */
+    /* Custom Theme: Orange and Blue (Revised with tints) */
     --background: 0 0% 98%; /* Slightly lighter white */
     --foreground: 240 10% 3.9%; /* Very dark blue-gray */
     --card: 0 0% 100%;
@@ -17,16 +17,16 @@ body {
     --popover-foreground: 240 10% 3.9%;
     --primary: 217 91% 60%; /* Blue */
     --primary-foreground: 210 40% 98%; /* Light blue-white */
-    --secondary: 240 4.8% 95.9%; /* Very light gray */
-    --secondary-foreground: 240 5.9% 10%; /* Dark gray */
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%; /* Medium gray */
+    --secondary: 217 30% 96%; /* Very light blue tint */
+    --secondary-foreground: 217 30% 30%; /* Dark grayish blue */
+    --muted: 25 50% 96%; /* Very light orange tint */
+    --muted-foreground: 25 50% 40%; /* Medium brownish orange */
     --accent: 25 95% 53%; /* Orange */
     --accent-foreground: 60 9.1% 97.8%; /* Off-white */
     --destructive: 0 84.2% 60.2%; /* Red HSL for destructive */
     --destructive-foreground: 60 9.1% 97.8%;
-    --border: 240 5.9% 90%; /* Light gray border */
-    --input: 240 5.9% 90%;
+    --border: 217 20% 90%; /* Light grayish blue border */
+    --input: 217 20% 90%; /* Light grayish blue input bg */
     --ring: 217 91% 60%; /* Blue */
     --chart-1: 217 91% 60%; /* Blue */
     --chart-2: 25 95% 53%; /* Orange */
@@ -40,11 +40,12 @@ body {
     --sidebar-primary-foreground: 210 40% 98%; /* Light blue-white */
     --sidebar-accent: 25 95% 90%; /* Very light orange */
     --sidebar-accent-foreground: 25 95% 20%; /* Dark orange for text */
-    --sidebar-border: 240 5.9% 90%; /* Light gray border */
+    --sidebar-border: 217 20% 90%; /* Light grayish blue border */
     --sidebar-ring: 217 91% 60%; /* Blue */
   }
 
   .dark {
+    /* Dark Mode with subtle Blue/Orange Tints */
     --background: 240 10% 3.9%; /* Very dark blue-gray */
     --foreground: 0 0% 98%; /* Near white */
     --card: 240 10% 3.9%;
@@ -53,16 +54,16 @@ body {
     --popover-foreground: 0 0% 98%;
     --primary: 217 91% 65%; /* Lighter Blue for dark mode contrast */
     --primary-foreground: 210 40% 9.8%; /* Very dark blue */
-    --secondary: 240 3.7% 15.9%; /* Dark gray */
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%; /* Medium-light gray */
+    --secondary: 217 20% 15%; /* Dark blue-gray tint */
+    --secondary-foreground: 217 20% 90%; /* Light blue-gray */
+    --muted: 25 30% 15%; /* Dark brownish orange tint */
+    --muted-foreground: 25 30% 70%; /* Medium-light orange-gray */
     --accent: 25 95% 58%; /* Lighter Orange for dark mode contrast */
     --accent-foreground: 48 9.1% 9.8%; /* Very dark brown */
     --destructive: 0 72% 51%; /* Slightly less intense red */
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
+    --border: 217 20% 15%; /* Dark blue-gray border */
+    --input: 217 20% 15%; /* Dark blue-gray input bg */
     --ring: 217 91% 65%; /* Lighter Blue */
     --chart-1: 217 91% 65%; /* Lighter Blue */
     --chart-2: 25 95% 58%; /* Lighter Orange */
@@ -75,7 +76,7 @@ body {
     --sidebar-primary-foreground: 210 40% 9.8%; /* Very dark blue */
     --sidebar-accent: 25 95% 20%; /* Very dark orange */
     --sidebar-accent-foreground: 25 95% 80%; /* Lighter orange for text */
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 217 20% 15%; /* Dark blue-gray border */
     --sidebar-ring: 217 91% 65%; /* Lighter Blue */
   }
 }
