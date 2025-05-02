@@ -25,7 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // Add the 'dark' class here to enable dark mode
+    <html lang="en" className="dark">
       <head>
         {/* Add Puter.js script using Next.js Script component */}
         <Script src="https://js.puter.com/v2/" strategy="beforeInteractive" />
