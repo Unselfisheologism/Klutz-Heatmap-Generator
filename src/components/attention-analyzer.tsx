@@ -27,10 +27,18 @@ interface TextSegment {
     engagement: 'engaging' | 'medium' | 'boring' | 'neutral'; // Add 'medium'
 }
 
+// Define BoundingBox type for image analysis
+interface BoundingBox {
+  xMin: number; // Percentage (0-100)
+  yMin: number; // Percentage (0-100)
+  xMax: number; // Percentage (0-100)
+  yMax: number; // Percentage (0-100)
+  label: 'high' | 'low';
+}
+
 interface ImageAnalysisResult {
-    description: string;
-    // Add heatmapData if the AI provides structured image heatmap info
-    // heatmapData?: any;
+  description: string;
+  attentionAreas?: BoundingBox[]; // Optional array for coordinates
 }
 
 // Union type for analysis results
@@ -164,6 +172,37 @@ export function AttentionAnalyzer() {
     // Filter out any empty segments that might have slipped through
     return segments.filter(s => s.text.length > 0);
    };
+
+    // Helper function to parse bounding box coordinates from AI response
+    const parseImageAnalysisCoordinates = (rawResponse: string): BoundingBox[] => {
+        const attentionAreas: BoundingBox[] = [];
+        // Regex to find labeled coordinate boxes, e.g., High Attention Box: [10, 20, 50, 60]
+        // Updated regex to capture percentages optionally
+        const regex = /(High|Low)\s+Attention\s+Box:\s*\[\s*(\d+(?:\.\d+)?%?)\s*,\s*(\d+(?:\.\d+)?%?)\s*,\s*(\d+(?:\.\d+)?%?)\s*,\s*(\d+(?:\.\d+)?%?)\s*\]/gi;
+        let match;
+
+        while ((match = regex.exec(rawResponse)) !== null) {
+            try {
+                const label = match[1].toLowerCase() as 'high' | 'low';
+                // Parse numbers, removing '%' if present
+                const xMin = parseFloat(match[2].replace('%', ''));
+                const yMin = parseFloat(match[3].replace('%', ''));
+                const xMax = parseFloat(match[4].replace('%', ''));
+                const yMax = parseFloat(match[5].replace('%', ''));
+
+                // Basic validation
+                if ([xMin, yMin, xMax, yMax].every(n => !isNaN(n) && n >= 0 && n <= 100) && xMin < xMax && yMin < yMax) {
+                    attentionAreas.push({ xMin, yMin, xMax, yMax, label });
+                } else {
+                    console.warn("Skipping invalid coordinate set:", match[0]);
+                }
+            } catch (parseError) {
+                console.error("Error parsing coordinates:", match[0], parseError);
+            }
+        }
+         console.log("Parsed Attention Areas:", attentionAreas);
+        return attentionAreas;
+    };
 
 
   const handleFileChange = useCallback((selectedFile: globalThis.File | null) => {
@@ -369,10 +408,23 @@ export function AttentionAnalyzer() {
     try {
       let prompt = '';
       let analysisInput: any = null; // Will hold prompt string or [prompt, dataUri]
-      let options = { model: 'gpt-4o' }; // Default model
+      let options = { model: 'gpt-4o' }; // Default model for text, vision model for image
 
       if (isAnalyzingFile && currentAnalysisMode === 'image') {
-        prompt = `Analyze this image and identify areas of high visual attention (interesting spots) and low visual attention (boring spots). Describe these areas. Also, provide a general summary of where a viewer's eye might be drawn first and why. Format the response clearly, perhaps using markdown for headings (e.g., ## High Attention Areas).`;
+        // Update prompt to request coordinates in a specific format
+        prompt = `Analyze this image for visual attention. Identify areas of high visual attention (likely to draw the eye) and low visual attention (less likely to be focused on).
+Describe these areas generally.
+CRITICALLY, also provide bounding box coordinates for the most prominent high and low attention areas.
+Format the coordinates ONLY as follows, using percentages (add more boxes if relevant):
+High Attention Box: [xMin%, yMin%, xMax%, yMax%]
+Low Attention Box: [xMin%, yMin%, xMax%, yMax%]
+High Attention Box: [xMin%, yMin%, xMax%, yMax%]
+...etc.
+Do NOT include any other text around the coordinate lines themselves.
+Keep the descriptive summary separate from the coordinate section.`;
+
+        options.model = 'gpt-4o'; // Puter uses GPT-4 Vision automatically when an image is passed
+
         // Need Data URI for image analysis with Puter
         const reader = new FileReader();
         reader.onloadend = async () => {
@@ -383,8 +435,19 @@ export function AttentionAnalyzer() {
                  const result = await puter.ai.chat(prompt, dataUri, false, options); // Added testMode=false explicitly
                  console.log("Puter AI Result (Image):", result);
                  const resultText = result?.message?.content || result?.text || JSON.stringify(result);
-                 // Store the raw response for images
-                 setAnalysisResult({ type: 'image', result: { description: resultText } });
+
+                 // Parse coordinates from the response
+                 const attentionAreas = parseImageAnalysisCoordinates(resultText);
+                 console.log("Parsed attention areas:", attentionAreas);
+
+                 // Store description and coordinates
+                 setAnalysisResult({
+                     type: 'image',
+                     result: {
+                         description: resultText.split("High Attention Box:")[0].split("Low Attention Box:")[0].trim(), // Get description before coordinates start
+                         attentionAreas: attentionAreas
+                     }
+                 });
                  toast({ title: 'Image analysis complete!' });
              } catch (err: any) {
                   console.error(`Image Analysis Error:`, err);
@@ -474,7 +537,12 @@ export function AttentionAnalyzer() {
              originalFileName = 'text_analysis';
          }
     } else if (analysisResult.type === 'image') {
-        contentToSave = analysisResult.result.description; // Save the description for image
+        // Include coordinates in the downloaded text file for images
+         contentToSave = `Description:\n${analysisResult.result.description}\n\nAttention Areas:\n`;
+         analysisResult.result.attentionAreas?.forEach(area => {
+             contentToSave += `${area.label === 'high' ? 'High' : 'Low'} Attention Box: [${area.xMin}%, ${area.yMin}%, ${area.xMax}%, ${area.yMax}%]\n`;
+         });
+
         if (inputMode === 'file' && uploadedFile) {
             originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'image_analysis';
         }
@@ -642,8 +710,23 @@ export function AttentionAnalyzer() {
           </CardHeader>
           <CardContent>
             {analysisResult.type === 'image' && filePreview && uploadedFile && (
-              <div className="mb-4 border rounded-lg overflow-hidden max-w-md mx-auto">
-                 <Image src={filePreview} alt="Analyzed Image" width={500} height={500} objectFit="contain" data-ai-hint="uploaded image analysis" />
+              <div className="mb-4 border rounded-lg overflow-hidden max-w-md mx-auto relative"> {/* Added relative positioning */}
+                 <Image src={filePreview} alt="Analyzed Image" width={500} height={500} style={{ width: '100%', height: 'auto', objectFit: 'contain' }} data-ai-hint="uploaded image analysis" />
+                 {/* Render bounding boxes */}
+                 {analysisResult.result.attentionAreas?.map((box, index) => {
+                     const style: React.CSSProperties = {
+                         position: 'absolute',
+                         left: `${box.xMin}%`,
+                         top: `${box.yMin}%`,
+                         width: `${box.xMax - box.xMin}%`,
+                         height: `${box.yMax - box.yMin}%`,
+                         border: `2px solid ${box.label === 'high' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'}`, // Blue for high, Red for low
+                         backgroundColor: box.label === 'high' ? 'hsla(var(--primary) / 0.2)' : 'hsla(var(--destructive) / 0.2)', // Semi-transparent fill
+                         boxShadow: '0 0 5px rgba(0, 0, 0, 0.5)', // Add a subtle shadow for visibility
+                         pointerEvents: 'none', // Ensure boxes don't interfere with image interaction
+                     };
+                     return <div key={index} style={style} />;
+                 })}
               </div>
             )}
 
@@ -652,30 +735,34 @@ export function AttentionAnalyzer() {
               <>
                 <h3 className="font-semibold mb-2 text-lg">Engagement Heatmap:</h3>
                 <TextHeatmap segments={analysisResult.segments} />
-                 {/* Optionally display raw response for debugging or if parsing fails */}
-                 {/*
-                 <h3 className="font-semibold mt-4 mb-2 text-lg">Raw AI Response:</h3>
-                 <Textarea
-                     readOnly
-                     value={analysisResult.rawResponse}
-                     className="border rounded-lg p-4 bg-muted text-muted-foreground min-h-[100px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-xs"
-                     aria-label="Raw AI analysis explanation"
-                 />
-                 */}
               </>
             )}
 
             {analysisResult.type === 'image' && (
               <>
-                <h3 className="font-semibold mb-2 text-lg">AI Analysis:</h3>
+                <h3 className="font-semibold mb-2 text-lg">AI Analysis Description:</h3>
                 <Textarea
                   readOnly
                   value={analysisResult.result.description}
-                  className="border rounded-lg p-4 bg-card text-card-foreground min-h-[200px] max-h-[400px] overflow-y-auto whitespace-pre-wrap text-sm"
+                  className="border rounded-lg p-4 bg-card text-card-foreground min-h-[100px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm mb-4" // Adjusted height
                   aria-label="AI image analysis result text"
                 />
-                {/* Placeholder for image heatmap visualization if implemented */}
-                 {/* <div className="mt-4 text-sm text-muted-foreground">[Image heatmap visualization would go here]</div> */}
+                 {/* Display coordinates if available */}
+                 {analysisResult.result.attentionAreas && analysisResult.result.attentionAreas.length > 0 && (
+                     <div>
+                         <h4 className="font-semibold text-md mb-1">Detected Attention Areas:</h4>
+                         <ul className="list-disc list-inside text-sm text-muted-foreground">
+                             {analysisResult.result.attentionAreas.map((area, index) => (
+                                 <li key={index}>
+                                     <span className={`font-medium ${area.label === 'high' ? 'text-primary' : 'text-destructive'}`}>
+                                         {area.label === 'high' ? 'High' : 'Low'} Attention:
+                                     </span>
+                                      [{area.xMin.toFixed(1)}%, {area.yMin.toFixed(1)}%] to [{area.xMax.toFixed(1)}%, {area.yMax.toFixed(1)}%]
+                                 </li>
+                             ))}
+                         </ul>
+                     </div>
+                 )}
               </>
             )}
 
