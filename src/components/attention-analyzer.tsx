@@ -563,7 +563,7 @@ Keep the descriptive summary separate from the coordinate section.`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
+            URL.revokeObjectURL(link.href); // Clean up the object URL
             toast({ title: 'Heatmap image download started!' });
         };
         img.onerror = () => {
@@ -598,7 +598,7 @@ Keep the descriptive summary separate from the coordinate section.`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+        URL.revokeObjectURL(link.href); // Clean up the object URL
         toast({ title: 'Analysis text download started!' });
      }
   };
@@ -631,7 +631,7 @@ Keep the descriptive summary separate from the coordinate section.`;
       )}
 
         <Tabs value={inputMode} onValueChange={(value) => setInputMode(value as InputMode)} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 md:max-w-md mx-auto"> {/* Responsive width */}
                 <TabsTrigger value="file"><File className="mr-2 h-4 w-4" /> Upload File</TabsTrigger>
                 <TabsTrigger value="text"><Type className="mr-2 h-4 w-4" /> Enter Text</TabsTrigger>
             </TabsList>
@@ -652,10 +652,10 @@ Keep the descriptive summary separate from the coordinate section.`;
                         <CardDescription>Drag & drop, paste, or select an image or document file.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 text-center min-h-[200px] transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}>
-                        <UploadCloud className={`h-12 w-12 mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 md:p-10 text-center min-h-[150px] md:min-h-[200px] transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}> {/* Responsive padding & height */}
+                        <UploadCloud className={`h-10 w-10 md:h-12 md:w-12 mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} /> {/* Responsive icon size */}
                          {filePreview && fileType === 'image' && uploadedFile ? (
-                             <div className="relative w-32 h-32 mb-4 group">
+                             <div className="relative w-24 h-24 md:w-32 md:h-32 mb-4 group"> {/* Responsive preview size */}
                                 <Image src={filePreview} alt="Preview" layout="fill" objectFit="contain" className="rounded border"/>
                                  <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 bg-background rounded-full h-6 w-6 p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={resetFull} aria-label="Remove file">
                                      <X className="h-4 w-4" />
@@ -669,13 +669,13 @@ Keep the descriptive summary separate from the coordinate section.`;
                                 </Button>
                              </div>
                          ) : (
-                            <p className="text-muted-foreground">{isDragging ? 'Drop the file here!' : 'Drag & drop file, paste content, or click browse.'}</p>
+                            <p className="text-sm md:text-base text-muted-foreground">{isDragging ? 'Drop the file here!' : 'Drag & drop file, paste content, or click browse.'}</p> /* Responsive text */
                          )}
 
                          {/* Hide button if file is uploaded */}
                         {!uploadedFile && (
                             <>
-                                <Label htmlFor="file-upload" className={`cursor-pointer text-primary hover:underline font-medium mt-2`}>
+                                <Label htmlFor="file-upload" className={`cursor-pointer text-primary hover:underline font-medium mt-2 text-sm md:text-base`}> {/* Responsive text */}
                                 Choose file
                                 </Label>
                                 <Input
@@ -686,7 +686,7 @@ Keep the descriptive summary separate from the coordinate section.`;
                                     onChange={handleFileUploadEvent}
                                     accept="image/*,text/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                                 />
-                                <p className="text-xs text-muted-foreground mt-2">Supports images (PNG, JPG, etc.) and documents (TXT, PDF, DOCX, etc.)</p>
+                                <p className="text-xs md:text-sm text-muted-foreground mt-2">Supports images (PNG, JPG, etc.) and documents (TXT, PDF, DOCX, etc.)</p> {/* Responsive text */}
                             </>
                         )}
                         </div>
@@ -714,7 +714,7 @@ Keep the descriptive summary separate from the coordinate section.`;
                             setError(null);
                         }}
                         placeholder="Paste or type your text here..."
-                        className="min-h-[200px]"
+                        className="min-h-[150px] md:min-h-[200px]" // Responsive height
                         aria-label="Text input for analysis"
                         />
                     </CardContent>
@@ -723,7 +723,7 @@ Keep the descriptive summary separate from the coordinate section.`;
         </Tabs>
 
       {/* Common Analyze Button */}
-       <Button onClick={handleAnalyze} disabled={isAnalyzeDisabled} className="w-full mt-4" aria-live="polite">
+       <Button onClick={handleAnalyze} disabled={isAnalyzeDisabled} className="w-full md:w-auto mt-4" aria-live="polite"> {/* Responsive width */}
             {isLoading ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -740,19 +740,19 @@ Keep the descriptive summary separate from the coordinate section.`;
       {/* Analysis Result Display */}
       {analysisResult && (
         <Card className="mt-6">
-          <CardHeader className="flex flex-row items-center justify-between space-x-4">
+          <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 md:space-x-4"> {/* Responsive layout */}
             <div>
                 <CardTitle>Analysis Result</CardTitle>
                 <CardDescription>AI-generated insights on content attention.</CardDescription>
             </div>
-             <Button onClick={handleDownload} variant="outline" size="sm">
+             <Button onClick={handleDownload} variant="outline" size="sm" className="w-full md:w-auto"> {/* Responsive width */}
               <Download className="mr-2 h-4 w-4" />
                 Download {analysisResult.type === 'image' ? 'Heatmap Image' : 'Analysis Text'}
             </Button>
           </CardHeader>
           <CardContent>
             {analysisResult.type === 'image' && filePreview && uploadedFile && (
-              <div className="mb-4 border rounded-lg overflow-hidden max-w-md mx-auto relative"> {/* Added relative positioning */}
+              <div className="mb-4 border rounded-lg overflow-hidden max-w-full md:max-w-md mx-auto relative"> {/* Responsive max-width */}
                  <Image src={filePreview} alt="Analyzed Image" width={500} height={500} style={{ width: '100%', height: 'auto', objectFit: 'contain' }} data-ai-hint="uploaded image analysis" />
                  {/* Render bounding boxes */}
                  {analysisResult.result.attentionAreas?.map((box, index) => {
@@ -786,7 +786,7 @@ Keep the descriptive summary separate from the coordinate section.`;
                 <Textarea
                   readOnly
                   value={analysisResult.result.description}
-                  className="border rounded-lg p-4 bg-card text-card-foreground min-h-[100px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm mb-4" // Adjusted height
+                  className="border rounded-lg p-4 bg-card text-card-foreground min-h-[100px] max-h-[200px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm mb-4" // Adjusted height and responsive max-height
                   aria-label="AI image analysis result text"
                 />
                  {/* Display coordinates if available */}
@@ -814,4 +814,3 @@ Keep the descriptive summary separate from the coordinate section.`;
     </div>
   );
 }
-

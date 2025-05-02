@@ -6,10 +6,11 @@ export default function Home() {
     // Add relative positioning and isolation context
     <div className="flex flex-col min-h-screen relative isolate">
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-8 z-10"> {/* Ensure main content has higher z-index than glows */}
+      {/* Adjusted padding for better spacing on mobile and larger screens */}
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 z-10"> {/* Ensure main content has higher z-index than glows */}
         <AttentionAnalyzer />
       </main>
-      <footer className="py-4 text-center text-sm text-muted-foreground z-10"> {/* Ensure footer content has higher z-index */}
+      <footer className="py-4 text-center text-xs sm:text-sm text-muted-foreground z-10"> {/* Ensure footer content has higher z-index, responsive text size */}
         Built with Next.js and Puter.js AI {/* Updated footer text */}
       </footer>
     </div>
