@@ -1,112 +1,117 @@
 'use client';
 
 import { useState, useCallback, ChangeEvent, DragEvent, useEffect, useRef } from 'react';
-// Removed Genkit imports
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Textarea } from '@/components/ui/textarea'; // Using Textarea for result display
-import { UploadCloud, Download, RefreshCw, AlertCircle, X } from 'lucide-react';
-import Image from 'next/image';
-import { useToast } from '@/hooks/use-toast';
-
 // Declare puter type globally or import if types are available
 declare global {
   interface Window {
     puter: any; // Use 'any' for now, replace with actual type if available
   }
 }
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Added Tabs
+import { UploadCloud, Download, RefreshCw, AlertCircle, X, Type, File } from 'lucide-react'; // Added Type, File icons
+import Image from 'next/image';
+import { useToast } from '@/hooks/use-toast';
 
-type FileType = 'image' | 'text' | null;
-// Analysis result will now be text for both image and text inputs
-type AnalysisResult = string | null;
+type InputMode = 'file' | 'text';
+type AnalysisResult = string | null; // Analysis result is always text
 
 export function AttentionAnalyzer() {
-  const [puter, setPuter] = useState<any>(null); // State to hold the puter instance
-  const [file, setFile] = useState<File | null>(null);
-  const [fileType, setFileType] = useState<FileType>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null); // For image preview or text content
+  const [puter, setPuter] = useState<any>(null);
+  const [inputMode, setInputMode] = useState<InputMode>('file');
+  const [uploadedFile, setUploadedFile] = useState<globalThis.File | null>(null);
+  const [fileType, setFileType] = useState<'image' | 'text' | null>(null); // Type of uploaded file
+  const [filePreview, setFilePreview] = useState<string | null>(null); // For image preview or uploaded text filename
+  const [textInput, setTextInput] = useState<string>(''); // For direct text input
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [analysisMode, setAnalysisMode] = useState<'image' | 'text' | null>(null); // To know what was analyzed
+  const [analysisMode, setAnalysisMode] = useState<'image' | 'text' | null>(null); // What was analyzed (image or text)
 
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
 
-  // Initialize Puter.js instance when component mounts
+  // Initialize Puter.js instance
   useEffect(() => {
     if (typeof window !== 'undefined' && window.puter) {
       setPuter(window.puter);
     } else {
-      // Optional: Poll for puter instance if script loads asynchronously
       const interval = setInterval(() => {
         if (typeof window !== 'undefined' && window.puter) {
           setPuter(window.puter);
           clearInterval(interval);
         }
       }, 100);
-      // Cleanup interval on component unmount
       return () => clearInterval(interval);
     }
   }, []);
 
   const resetState = useCallback(() => {
-    setFile(null);
+    setUploadedFile(null);
     setFileType(null);
     setFilePreview(null);
+    // Don't reset textInput here, user might switch modes
     setAnalysisResult(null);
     setIsLoading(false);
     setError(null);
     setIsDragging(false);
     setAnalysisMode(null);
-    // Reset file input visually
     if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      fileInputRef.current.value = '';
     }
   }, []);
 
+  const resetFull = useCallback(() => {
+    resetState();
+    setTextInput(''); // Reset text input on full reset
+  }, [resetState]);
 
-  const handleFileChange = useCallback((selectedFile: File | null) => {
+  const handleFileChange = useCallback((selectedFile: globalThis.File | null) => {
     if (!selectedFile) {
-      resetState();
+      // Only reset file state if a file was previously selected
+      if (uploadedFile) {
+        setUploadedFile(null);
+        setFileType(null);
+        setFilePreview(null);
+        // Keep analysis result if it exists
+      }
       return;
     }
 
-    // Reset previous state before processing new file
-    resetState();
+    // Reset previous file state before processing new file
+    setUploadedFile(null);
+    setFileType(null);
+    setFilePreview(null);
+    setAnalysisResult(null); // Reset analysis when new file is selected
+    setAnalysisMode(null);
+    setError(null); // Clear errors
 
     const reader = new FileReader();
-    const type = selectedFile.type.startsWith('image/') ? 'image' : 'text'; // Simplify: treat non-images as text
+    const type = selectedFile.type.startsWith('image/') ? 'image' : 'text';
 
-    // Basic validation for common types, can be expanded
     const allowedImageTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-    const allowedTextTypes = ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/html', 'text/csv']; // Add more if needed
+    // Basic text check, Puter.js handles more complex types
+    const isLikelyText = type === 'text' || selectedFile.type.includes('text') || selectedFile.type.includes('pdf') || selectedFile.type.includes('document');
 
     if (type === 'image' && !allowedImageTypes.includes(selectedFile.type)) {
       setError(`Unsupported image type: ${selectedFile.type}. Please use PNG, JPG, GIF, or WEBP.`);
-      toast({
-        title: 'Unsupported Image Type',
-        description: `Please use PNG, JPG, GIF, or WEBP.`,
-        variant: 'destructive',
-      });
+      toast({ title: 'Unsupported Image Type', description: `Please use PNG, JPG, GIF, or WEBP.`, variant: 'destructive' });
+      resetState(); // Reset everything including file input
       return;
     }
-    // For text, we'll attempt analysis but warn if it's not plain text
-    // if (type === 'text' && !allowedTextTypes.includes(selectedFile.type)) {
-    //   console.warn(`Attempting to analyze potentially unsupported text type: ${selectedFile.type}`);
-    //    toast({
-    //      title: 'Potentially Unsupported Text Type',
-    //      description: `Analysis may work best with TXT, PDF, DOC files.`,
-    //      variant: 'default', // Use default or warning variant
-    //    });
-    // }
+    if (!isLikelyText && type === 'text') {
+        console.warn(`Attempting to analyze potentially unsupported text type: ${selectedFile.type}`);
+        toast({ title: 'Potentially Unsupported Type', description: `Analysis might work best with standard image or text formats.`, variant: 'default' });
+    }
 
 
-    setFile(selectedFile);
+    setUploadedFile(selectedFile);
     setFileType(type);
 
     reader.onloadend = () => {
@@ -114,35 +119,29 @@ export function AttentionAnalyzer() {
       if (type === 'image') {
         setFilePreview(resultString); // Data URI for image preview
       } else {
-        // For text, store the actual content for display/analysis if it's plain text
-        if (selectedFile.type === 'text/plain' || selectedFile.type === 'text/html' || selectedFile.type === 'text/csv') {
-           reader.onload = (e) => setFilePreview(e.target?.result as string); // Store text content
-           reader.readAsText(selectedFile); // Reread as text
-        } else {
-           setFilePreview(selectedFile.name); // Show filename for PDF/DOC etc.
-        }
+        setFilePreview(selectedFile.name); // Show filename for text files
       }
     };
 
     reader.onerror = () => {
-        setError(`Failed to read the file: ${selectedFile.name}`);
-        toast({ title: 'File Read Error', description: `Could not read file: ${selectedFile.name}`, variant: 'destructive' });
-        resetState();
+      setError(`Failed to read the file: ${selectedFile.name}`);
+      toast({ title: 'File Read Error', description: `Could not read file: ${selectedFile.name}`, variant: 'destructive' });
+      resetState();
     };
 
-    // Read as Data URL initially for potential image preview or sending non-plain text
-    reader.readAsDataURL(selectedFile);
+    reader.readAsDataURL(selectedFile); // Read as Data URL for consistency and image preview
 
-  }, [resetState, toast]);
+  }, [resetState, toast, uploadedFile]);
 
 
-  const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUploadEvent = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     handleFileChange(files && files.length > 0 ? files[0] : null);
   };
 
-   const handlePaste = useCallback(async (event: ClipboardEvent) => {
-    if (!puter) {
+  const handlePaste = useCallback(async (event: ClipboardEvent) => {
+    if (inputMode !== 'file') return; // Only handle paste in file mode
+     if (!puter) {
        toast({ title: 'Puter.js not ready', description: 'Please wait a moment and try again.', variant: 'destructive' });
        return;
     }
@@ -161,46 +160,46 @@ export function AttentionAnalyzer() {
           toast({ title: 'Pasted image successfully!' });
           break;
         }
-      } else if (item.kind === 'string' && item.type.startsWith('text/plain')) {
-        item.getAsString((text) => {
-           if (text) {
-             // Simulate a file for consistency
-             const blob = new Blob([text], { type: 'text/plain' });
-             const file = new File([blob], 'pasted_text.txt', { type: 'text/plain' });
+      } else if (item.kind === 'file') { // Handle any file type pasted as text source
+         const file = item.getAsFile();
+         if (file) {
              handleFileChange(file);
              foundContent = true;
-             toast({ title: 'Pasted text successfully!' });
-           }
-        });
-        // Need to break here because getAsString is async
-         if (foundContent) break;
+             toast({ title: 'Pasted file successfully!' });
+             break;
+         }
       }
     }
 
-     if (!foundContent) {
-       // Check for non-image files after images/text
+    // Fallback to pasting plain text into the text input mode if no file found
+    if (!foundContent) {
         for (let i = 0; i < items.length; i++) {
-           const item = items[i];
-           if (item.kind === 'file') { // Handle any file type pasted
-               const file = item.getAsFile();
-               if (file) {
-                   handleFileChange(file);
-                   foundContent = true;
-                   toast({ title: 'Pasted file successfully!' });
-                   break;
-               }
-           }
+             const item = items[i];
+             if (item.kind === 'string' && item.type.startsWith('text/plain')) {
+                 item.getAsString((text) => {
+                   if (text) {
+                     setInputMode('text'); // Switch to text mode
+                     setTextInput(text);
+                     resetState(); // Clear file state
+                     foundContent = true;
+                     toast({ title: 'Pasted text successfully!' });
+                   }
+                 });
+                 // Need to break here because getAsString is async
+                 if (foundContent) break;
+             }
         }
-     }
+    }
 
      if (!foundContent) {
-        toast({ title: 'No compatible content found in clipboard.', description: 'Paste an image, text, or a file.', variant: 'destructive' });
+        toast({ title: 'No compatible content found in clipboard.', description: 'Paste an image, file, or plain text.', variant: 'destructive' });
      }
 
-  }, [handleFileChange, toast, puter]);
+  }, [handleFileChange, toast, puter, inputMode, resetState]);
 
 
   const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (inputMode !== 'file') return; // Only handle drop in file mode
     event.preventDefault();
     event.stopPropagation();
     setIsDragging(false);
@@ -209,26 +208,25 @@ export function AttentionAnalyzer() {
       handleFileChange(event.dataTransfer.files[0]);
       event.dataTransfer.clearData();
     }
-  }, [handleFileChange]);
+  }, [handleFileChange, inputMode]);
 
   const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (inputMode !== 'file') return;
     event.preventDefault();
     event.stopPropagation();
     setIsDragging(true);
-  }, []);
+  }, [inputMode]);
 
   const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
+     if (inputMode !== 'file') return;
     event.preventDefault();
     event.stopPropagation();
-    // Only set dragging to false if the leave target is outside the drop zone
-    // This prevents flickering when dragging over child elements
     if ((event.relatedTarget as Node)?.contains && !(event.currentTarget as Node).contains(event.relatedTarget as Node)) {
         setIsDragging(false);
     } else if (!event.relatedTarget) {
-        // Handles leaving the window entirely
         setIsDragging(false);
     }
-  }, []);
+  }, [inputMode]);
 
    const handleAnalyze = async () => {
     if (!puter) {
@@ -236,97 +234,116 @@ export function AttentionAnalyzer() {
       toast({ title: 'Puter.js Error', description: 'Puter.js failed to load.', variant: 'destructive' });
       return;
     }
-    if (!file || !fileType) {
-      setError('Please upload or paste a file first.');
-      toast({ title: 'No File', description: 'Upload or paste a file to analyze.', variant: 'destructive' });
+
+    const isAnalyzingFile = inputMode === 'file' && !!uploadedFile;
+    const isAnalyzingText = inputMode === 'text' && textInput.trim().length > 0;
+
+    if (!isAnalyzingFile && !isAnalyzingText) {
+      setError('Please provide content to analyze (upload/paste a file or enter text).');
+      toast({ title: 'No Content', description: 'Provide content to analyze.', variant: 'destructive' });
       return;
     }
 
     // Prompt for sign-in if not already signed in
-    if (!puter.auth.isSignedIn()) {
+     if (!puter.auth.isSignedIn()) {
         try {
             toast({ title: 'Authentication Required', description: 'Please sign in with Puter to continue.' });
             await puter.auth.signIn();
             toast({ title: 'Signed In Successfully!' });
-        } catch (authError) {
+        } catch (authError: any) {
             console.error('Authentication Error:', authError);
-            setError('Authentication failed or was cancelled. Please sign in to analyze.');
-            toast({ title: 'Authentication Failed', description: 'Could not sign in with Puter.', variant: 'destructive' });
-            return; // Stop analysis if auth fails
+            // Check if the error indicates user cancellation
+             if (authError?.message?.includes('closed')) {
+                 setError('Authentication cancelled. Please sign in to analyze.');
+                 toast({ title: 'Authentication Cancelled', description: 'Sign in is required for analysis.', variant: 'destructive' });
+             } else {
+                 setError('Authentication failed. Please try signing in again.');
+                 toast({ title: 'Authentication Failed', description: `Could not sign in with Puter: ${authError?.message || 'Unknown error'}`, variant: 'destructive' });
+             }
+            return; // Stop analysis if auth fails or is cancelled
         }
     }
-
 
     setIsLoading(true);
     setError(null);
     setAnalysisResult(null);
-    setAnalysisMode(fileType); // Set the mode based on the input file type
+    const currentAnalysisMode = isAnalyzingFile ? fileType : 'text'; // 'image' or 'text'
+    setAnalysisMode(currentAnalysisMode);
 
     try {
-      const reader = new FileReader();
+      let prompt = '';
+      let analysisInput: any = null; // Will hold prompt string or [prompt, dataUri]
+      let options = { model: 'gpt-4o' }; // Default model
 
-      reader.onloadend = async () => {
-          const dataUri = reader.result as string;
-          let prompt = '';
-          let analysisInput: any = null;
-          let options = { model: 'gpt-4o' }; // Default to gpt-4o
+      if (isAnalyzingFile && currentAnalysisMode === 'image') {
+        prompt = `Analyze this image and identify areas of high visual attention (interesting spots) and low visual attention (boring spots). Describe these areas. Also, provide a general summary of where a viewer's eye might be drawn first and why. Format the response clearly, perhaps using markdown for headings (e.g., ## High Attention Areas).`;
+        // Need Data URI for image analysis with Puter
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const dataUri = reader.result as string;
+             try {
+                 console.log(`Calling puter.ai.chat (Image) with model: ${options.model}`);
+                 // Pass prompt and data URI
+                 const result = await puter.ai.chat(prompt, dataUri, false, options); // Added testMode=false explicitly
+                 console.log("Puter AI Result (Image):", result);
+                 const resultText = result?.message?.content || result?.text || JSON.stringify(result);
+                 setAnalysisResult(resultText);
+                 toast({ title: 'Image analysis complete!' });
+             } catch (err: any) {
+                  console.error(`Image Analysis Error:`, err);
+                   setError(`Failed to analyze the image. ${err.message || 'Please try again.'}`);
+                   toast({ title: 'Analysis Error', description: `Could not analyze the image.`, variant: 'destructive' });
+             } finally {
+                  setIsLoading(false);
+             }
+        };
+         reader.onerror = () => {
+             setError('Failed to read the image file for analysis.');
+             toast({ title: 'File Read Error', description: 'Could not read image file.', variant: 'destructive'});
+             setIsLoading(false);
+         };
+         reader.readAsDataURL(uploadedFile as globalThis.File);
+         // Return here because the analysis happens in the async onloadend
+         return;
 
-          if (fileType === 'image') {
-              prompt = `Analyze this image and identify areas of high visual attention (interesting spots) and low visual attention (boring spots). Describe these areas. Also, provide a general summary of where a viewer's eye might be drawn first and why. Format the response clearly, perhaps using markdown for headings (e.g., ## High Attention Areas).`;
-              // Puter.js AI chat with image URL (data URI)
-              analysisInput = [dataUri]; // Pass data URI as the second argument for image context
-              options.model = 'gpt-4o'; // GPT-4o supports vision
-
-          } else if (fileType === 'text') {
-              // Extract text content for analysis. If it's not plain text, this might be inaccurate.
-              // A more robust solution for PDF/DOC might use puter.ai.img2txt if applicable or server-side parsing.
-              // For this example, we'll assume plain text extraction or send the whole content.
-              let textContent = filePreview || ''; // Use preview if it's text content, otherwise filename
-
-              if (file.type === 'text/plain' || file.type === 'text/html' || file.type === 'text/csv') {
-                 // If we stored text content in filePreview
-                 textContent = filePreview || '';
-              } else {
-                 // For non-plain text, read again as text (best effort)
-                 textContent = await file.text().catch(e => {
-                     console.error("Error reading non-plain text file:", e);
-                     setError(`Could not read content from ${file.name}. Analysis might be based on filename only.`);
-                     return `File: ${file.name}, Type: ${file.type}`; // Fallback content
-                 });
+      } else { // Text analysis (either from uploaded file or direct input)
+          let textContent = '';
+          if (isAnalyzingFile && currentAnalysisMode === 'text') {
+              // Read text from uploaded file
+              try {
+                  textContent = await (uploadedFile as globalThis.File).text();
+              } catch (readError: any) {
+                   console.error("Error reading text file:", readError);
+                   setError(`Could not read content from ${uploadedFile?.name}. ${readError.message}`);
+                   toast({ title: 'File Read Error', description: `Could not read file ${uploadedFile?.name}.`, variant: 'destructive' });
+                   setIsLoading(false);
+                   return;
               }
-
-              prompt = `Analyze the following text content. Identify sentences or sections that are particularly engaging or attention-grabbing, and sections that might be considered boring or less engaging. Explain your reasoning for each. Also, provide an overall summary of the text's engagement potential. Structure the response clearly, perhaps using markdown. Text Content:\n\n"${textContent}"`;
-              // Puter.js AI chat with text prompt
-              analysisInput = prompt; // Pass only the prompt for text analysis
+          } else if (isAnalyzingText) {
+              textContent = textInput;
           }
 
-          try {
-              console.log(`Calling puter.ai.chat with model: ${options.model}`);
-              const result = await puter.ai.chat(prompt, analysisInput, options);
-              console.log("Puter AI Result:", result);
-              // Puter's response format might vary, adjust access accordingly.
-              // Assuming the result structure has a 'text' or similar property.
-              const resultText = result?.message?.content || result?.text || JSON.stringify(result); // Adapt based on actual Puter response
-              setAnalysisResult(resultText);
-              toast({ title: `${fileType === 'image' ? 'Image' : 'Text'} analysis complete!` });
-          } catch (err: any) {
-              console.error(`${fileType === 'image' ? 'Image' : 'Text'} Analysis Error:`, err);
-              setError(`Failed to analyze the ${fileType}. ${err.message || 'Please try again.'}`);
-              toast({ title: 'Analysis Error', description: `Could not analyze the ${fileType}.`, variant: 'destructive' });
-          } finally {
-              setIsLoading(false);
-          }
-      };
+          prompt = `Analyze the following text content. Identify sentences or sections that are particularly engaging or attention-grabbing, and sections that might be considered boring or less engaging. Explain your reasoning for each. Also, provide an overall summary of the text's engagement potential. Structure the response clearly, perhaps using markdown. Text Content:\n\n"${textContent}"`;
+           analysisInput = prompt; // Only prompt needed for text
+           options.model = 'gpt-4o'; // Use gpt-4o for text analysis
+      }
 
-       reader.onerror = () => {
-         setError('Failed to read the file.');
-         toast({ title: 'File Read Error', description: 'Could not read the file.', variant: 'destructive'});
-         setIsLoading(false);
-       }
-
-      // Read the file as Data URI. This is needed for sending images to puter.ai.chat
-      // and serves as a fallback for non-plain text files.
-      reader.readAsDataURL(file);
+       // Execute text analysis if we didn't return early for image reading
+        try {
+            console.log(`Calling puter.ai.chat (Text) with model: ${options.model}`);
+            // Pass only the prompt for text analysis
+            const result = await puter.ai.chat(analysisInput, false, options); // Pass prompt, no imageURL, testMode=false
+            console.log("Puter AI Result (Text):", result);
+            const resultText = result?.message?.content || result?.text || JSON.stringify(result);
+            setAnalysisResult(resultText);
+            toast({ title: 'Text analysis complete!' });
+        } catch (err: any) {
+            console.error(`Text Analysis Error:`, err);
+            setError(`Failed to analyze the text. ${err.message || 'Please try again.'}`);
+            toast({ title: 'Analysis Error', description: `Could not analyze the text.`, variant: 'destructive' });
+        } finally {
+            setIsLoading(false);
+        }
 
     } catch (err: any) {
       console.error('Analysis Setup Error:', err);
@@ -336,14 +353,19 @@ export function AttentionAnalyzer() {
     }
   };
 
-
   const handleDownload = () => {
-    if (!analysisResult || !analysisMode) return; // Need analysisMode to determine file type
+    if (!analysisResult || !analysisMode) return;
 
     const link = document.createElement('a');
-    const fileExtension = analysisMode === 'image' ? 'txt' : 'txt'; // Save analysis description as text
-    const originalFileName = file?.name.replace(/\.[^/.]+$/, "") || 'analysis'; // Get original name without extension
-    link.download = `attention_analysis_${originalFileName}.${fileExtension}`;
+    const fileExtension = 'txt'; // Always save analysis as text
+    let originalFileName = 'analysis';
+    if (inputMode === 'file' && uploadedFile) {
+        originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'file_analysis';
+    } else if (inputMode === 'text') {
+        originalFileName = 'text_analysis';
+    }
+
+    link.download = `attention_${originalFileName}.${fileExtension}`;
 
     const blob = new Blob([analysisResult], { type: 'text/plain' });
     link.href = URL.createObjectURL(blob);
@@ -351,9 +373,11 @@ export function AttentionAnalyzer() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(link.href); // Clean up blob URL
+    URL.revokeObjectURL(link.href);
     toast({ title: 'Download started!' });
   };
+
+  const isAnalyzeDisabled = isLoading || !puter || (inputMode === 'file' && !uploadedFile) || (inputMode === 'text' && textInput.trim().length === 0);
 
 
   return (
@@ -369,83 +393,126 @@ export function AttentionAnalyzer() {
             </Alert>
         )}
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="relative">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
-           <Button variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => setError(null)}>
+           <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => setError(null)}>
                 <X className="h-4 w-4" />
+                <span className="sr-only">Dismiss error</span>
            </Button>
         </Alert>
       )}
 
-      <Card
-        className={`transition-colors duration-200 ease-in-out ${isDragging ? 'border-primary border-2 ring-2 ring-primary ring-offset-2' : 'border-border'}`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragOver} // Make sure enter also sets dragging state
-        onDragLeave={handleDragLeave}
-        onPaste={handlePaste} // Listen for paste events
-        tabIndex={0} // Make card focusable for paste
-        aria-label="Content upload area: Drag & drop, paste, or click to browse files"
-      >
-        <CardHeader>
-          <CardTitle>Upload Content</CardTitle>
-          <CardDescription>Drag & drop, paste, or select an image or text file.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 text-center min-h-[200px] transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}>
-            <UploadCloud className={`h-12 w-12 mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
-             {filePreview && fileType === 'image' ? (
-                 <div className="relative w-32 h-32 mb-4 group">
-                    <Image src={filePreview} alt="Preview" layout="fill" objectFit="contain" className="rounded border"/>
-                     <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 bg-background rounded-full h-6 w-6 p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={resetState} aria-label="Remove file">
-                         <X className="h-4 w-4" />
-                     </Button>
-                 </div>
-             ) : file ? (
-                 <div className="relative mb-4 text-center bg-muted p-2 rounded max-w-full overflow-hidden text-ellipsis whitespace-nowrap group">
-                    <span className="text-sm font-medium">{file.name}</span> <span className="text-xs text-muted-foreground">({file.type || 'unknown type'})</span>
-                    <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 bg-background rounded-full h-6 w-6 p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={resetState} aria-label="Remove file">
-                        <X className="h-4 w-4" />
-                    </Button>
-                 </div>
-             ) : (
-                <p className="text-muted-foreground">{isDragging ? 'Drop the file here!' : 'Drag & drop, paste content, or click to browse.'}</p>
-             )}
+        <Tabs value={inputMode} onValueChange={(value) => setInputMode(value as InputMode)} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="file"><File className="mr-2 h-4 w-4" /> Upload File</TabsTrigger>
+                <TabsTrigger value="text"><Type className="mr-2 h-4 w-4" /> Enter Text</TabsTrigger>
+            </TabsList>
 
-            <Label htmlFor="file-upload" className={`cursor-pointer text-primary hover:underline font-medium mt-2 ${file ? 'hidden' : ''}`}>
-              {file ? 'Choose different file' : 'Choose file'}
-            </Label>
-            <Input
-                ref={fileInputRef} // Attach ref
-                id="file-upload"
-                type="file"
-                className="hidden"
-                onChange={handleFileUpload}
-                // Accept common image and text types
-                accept="image/*,text/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-             />
-             <p className="text-xs text-muted-foreground mt-2">Supports images (PNG, JPG, etc.) and text documents (TXT, PDF, DOCX, etc.)</p>
-          </div>
-          <Button onClick={handleAnalyze} disabled={!file || isLoading || !puter} className="w-full" aria-live="polite">
+             <TabsContent value="file">
+                 <Card
+                    className={`mt-4 transition-colors duration-200 ease-in-out ${isDragging ? 'border-primary border-2 ring-2 ring-primary ring-offset-2' : 'border-border'}`}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onPaste={handlePaste} // Listen for paste events here
+                    tabIndex={0} // Make card focusable for paste
+                    aria-label="Content upload area: Drag & drop, paste, or click to browse files"
+                    >
+                    <CardHeader>
+                        <CardTitle>Upload Content File</CardTitle>
+                        <CardDescription>Drag & drop, paste, or select an image or document file.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 text-center min-h-[200px] transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}>
+                        <UploadCloud className={`h-12 w-12 mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                         {filePreview && fileType === 'image' && uploadedFile ? (
+                             <div className="relative w-32 h-32 mb-4 group">
+                                <Image src={filePreview} alt="Preview" layout="fill" objectFit="contain" className="rounded border"/>
+                                 <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 bg-background rounded-full h-6 w-6 p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={resetFull} aria-label="Remove file">
+                                     <X className="h-4 w-4" />
+                                 </Button>
+                             </div>
+                         ) : uploadedFile ? ( // Display info for any uploaded file (image or text)
+                             <div className="relative mb-4 text-center bg-muted p-2 rounded max-w-full overflow-hidden text-ellipsis whitespace-nowrap group">
+                                <span className="text-sm font-medium">{uploadedFile.name}</span> <span className="text-xs text-muted-foreground">({uploadedFile.type || 'unknown type'})</span>
+                                <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 bg-background rounded-full h-6 w-6 p-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={resetFull} aria-label="Remove file">
+                                    <X className="h-4 w-4" />
+                                </Button>
+                             </div>
+                         ) : (
+                            <p className="text-muted-foreground">{isDragging ? 'Drop the file here!' : 'Drag & drop file, paste content, or click browse.'}</p>
+                         )}
+
+                         {/* Hide button if file is uploaded */}
+                        {!uploadedFile && (
+                            <>
+                                <Label htmlFor="file-upload" className={`cursor-pointer text-primary hover:underline font-medium mt-2`}>
+                                Choose file
+                                </Label>
+                                <Input
+                                    ref={fileInputRef}
+                                    id="file-upload"
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleFileUploadEvent}
+                                    accept="image/*,text/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                />
+                                <p className="text-xs text-muted-foreground mt-2">Supports images (PNG, JPG, etc.) and documents (TXT, PDF, DOCX, etc.)</p>
+                            </>
+                        )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="text">
+                <Card className="mt-4">
+                    <CardHeader>
+                        <CardTitle>Enter Text</CardTitle>
+                        <CardDescription>Paste or type the text you want to analyze.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Textarea
+                        value={textInput}
+                        onChange={(e) => {
+                            setTextInput(e.target.value);
+                            if (e.target.value) {
+                                resetState(); // Clear file state if user types text
+                            }
+                            setAnalysisResult(null); // Clear analysis if text changes
+                            setAnalysisMode(null);
+                            setError(null);
+                        }}
+                        placeholder="Paste or type your text here..."
+                        className="min-h-[200px]"
+                        aria-label="Text input for analysis"
+                        />
+                    </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
+
+      {/* Common Analyze Button */}
+       <Button onClick={handleAnalyze} disabled={isAnalyzeDisabled} className="w-full mt-4" aria-live="polite">
             {isLoading ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                 Analyzing...
               </>
             ) : (
-              `Analyze ${fileType ? (fileType === 'image' ? 'Image' : 'Text') : 'Content'}`
+                `Analyze ${inputMode === 'file' ? (fileType === 'image' ? 'Image' : 'Document') : 'Text'}`
             )}
-          </Button>
+        </Button>
           {/* Simple visual loading indicator */}
-          {isLoading && <div className="h-2 bg-primary/20 rounded-full w-full overflow-hidden"><div className="h-full bg-primary animate-pulse w-1/2 mx-auto"></div></div>}
+        {isLoading && <div className="h-2 bg-primary/20 rounded-full w-full overflow-hidden mt-2"><div className="h-full bg-primary animate-pulse w-1/2 mx-auto"></div></div>}
 
-        </CardContent>
-      </Card>
 
+      {/* Analysis Result Display */}
       {analysisResult && analysisMode && (
-        <Card>
+        <Card className="mt-6">
           <CardHeader className="flex flex-row items-center justify-between space-x-4">
             <div>
                 <CardTitle>Analysis Result</CardTitle>
@@ -457,7 +524,7 @@ export function AttentionAnalyzer() {
             </Button>
           </CardHeader>
           <CardContent>
-            {analysisMode === 'image' && filePreview && (
+            {analysisMode === 'image' && filePreview && uploadedFile && (
               <div className="mb-4 border rounded-lg overflow-hidden max-w-md mx-auto">
                  <Image src={filePreview} alt="Analyzed Image" width={500} height={500} objectFit="contain" data-ai-hint="uploaded image analysis" />
               </div>
