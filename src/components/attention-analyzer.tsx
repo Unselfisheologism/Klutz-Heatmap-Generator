@@ -17,9 +17,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UploadCloud, Download, RefreshCw, AlertCircle, X, Type, File } from 'lucide-react'; // Added Type, File icons
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
+import { TextHeatmap } from './text-heatmap'; // Import the new component
 
 type InputMode = 'file' | 'text';
-type AnalysisResult = string | null; // Analysis result is always text
+
+// Define a type for structured text analysis results
+interface TextSegment {
+    text: string;
+    engagement: 'engaging' | 'boring' | 'neutral'; // Add 'neutral' or adjust as needed
+}
+
+interface ImageAnalysisResult {
+    description: string;
+    // Add heatmapData if the AI provides structured image heatmap info
+    // heatmapData?: any;
+}
+
+// Union type for analysis results
+type AnalysisResult =
+  | { type: 'text'; segments: TextSegment[]; rawResponse: string }
+  | { type: 'image'; result: ImageAnalysisResult }
+  | null;
+
 
 export function AttentionAnalyzer() {
   const [puter, setPuter] = useState<any>(null);
@@ -28,7 +47,7 @@ export function AttentionAnalyzer() {
   const [fileType, setFileType] = useState<'image' | 'text' | null>(null); // Type of uploaded file
   const [filePreview, setFilePreview] = useState<string | null>(null); // For image preview or uploaded text filename
   const [textInput, setTextInput] = useState<string>(''); // For direct text input
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult>(null); // Updated type
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -71,6 +90,61 @@ export function AttentionAnalyzer() {
     resetState();
     setTextInput(''); // Reset text input on full reset
   }, [resetState]);
+
+   // Helper function to parse the AI's text analysis response
+   const parseTextAnalysis = (rawResponse: string): TextSegment[] => {
+    // This is a placeholder parsing logic.
+    // It assumes the AI returns segments marked like:
+    // [ENGAGING]This part is great![/ENGAGING]
+    // [BORING]This part needs work.[/BORING]
+    // This part is neutral.
+    // You'll need to adapt this based on the actual output format from your Puter.js AI call.
+    const segments: TextSegment[] = [];
+    const regex = /\[(ENGAGING|BORING)\]([\s\S]*?)\[\/\1\]|([^\[]+)/g;
+    let match;
+    let lastIndex = 0;
+
+    while ((match = regex.exec(rawResponse)) !== null) {
+      // Add any neutral text before this match
+      if (match.index > lastIndex) {
+        segments.push({
+          text: rawResponse.substring(lastIndex, match.index).trim(),
+          engagement: 'neutral',
+        });
+      }
+
+      if (match[1] && match[2]) { // Matched [ENGAGING]...[/ENGAGING] or [BORING]...[/BORING]
+        segments.push({
+          text: match[2].trim(),
+          engagement: match[1] === 'ENGAGING' ? 'engaging' : 'boring',
+        });
+      } else if (match[3]) { // Matched neutral text segment
+        // Only add if it's not just whitespace, handle potential empty matches
+         const neutralText = match[3].trim();
+         if (neutralText) {
+            segments.push({ text: neutralText, engagement: 'neutral' });
+         }
+      }
+      lastIndex = regex.lastIndex;
+    }
+
+    // Add any remaining neutral text after the last match
+    if (lastIndex < rawResponse.length) {
+      segments.push({
+        text: rawResponse.substring(lastIndex).trim(),
+        engagement: 'neutral',
+      });
+    }
+
+    // If parsing fails or returns empty, return the whole text as neutral
+    if (segments.length === 0 && rawResponse.trim()) {
+      return [{ text: rawResponse.trim(), engagement: 'neutral' }];
+    }
+
+    // Filter out potential empty segments added during parsing
+    return segments.filter(s => s.text.length > 0);
+   };
+
 
   const handleFileChange = useCallback((selectedFile: globalThis.File | null) => {
     if (!selectedFile) {
@@ -287,7 +361,8 @@ export function AttentionAnalyzer() {
                  const result = await puter.ai.chat(prompt, dataUri, false, options); // Added testMode=false explicitly
                  console.log("Puter AI Result (Image):", result);
                  const resultText = result?.message?.content || result?.text || JSON.stringify(result);
-                 setAnalysisResult(resultText);
+                 // Store the raw response for images
+                 setAnalysisResult({ type: 'image', result: { description: resultText } });
                  toast({ title: 'Image analysis complete!' });
              } catch (err: any) {
                   console.error(`Image Analysis Error:`, err);
@@ -312,6 +387,7 @@ export function AttentionAnalyzer() {
               // Read text from uploaded file
               try {
                   textContent = await (uploadedFile as globalThis.File).text();
+                  setTextInput(textContent); // Update textInput state with file content
               } catch (readError: any) {
                    console.error("Error reading text file:", readError);
                    setError(`Could not read content from ${uploadedFile?.name}. ${readError.message}`);
@@ -323,7 +399,8 @@ export function AttentionAnalyzer() {
               textContent = textInput;
           }
 
-          prompt = `Analyze the following text content. Identify sentences or sections that are particularly engaging or attention-grabbing, and sections that might be considered boring or less engaging. Explain your reasoning for each. Also, provide an overall summary of the text's engagement potential. Structure the response clearly, perhaps using markdown. Text Content:\n\n"${textContent}"`;
+          // Update the prompt to request specific formatting for parsing
+          prompt = `Analyze the following text content. Identify sentences or sections that are particularly engaging or attention-grabbing, and sections that might be considered boring or less engaging. Explain your reasoning for each. Format the response by wrapping engaging parts in [ENGAGING]...[/ENGAGING] and boring parts in [BORING]...[/BORING]. Leave neutral parts as plain text. Text Content:\n\n"${textContent}"`;
            analysisInput = prompt; // Only prompt needed for text
            options.model = 'gpt-4o'; // Use gpt-4o for text analysis
       }
@@ -335,7 +412,12 @@ export function AttentionAnalyzer() {
             const result = await puter.ai.chat(analysisInput, false, options); // Pass prompt, no imageURL, testMode=false
             console.log("Puter AI Result (Text):", result);
             const resultText = result?.message?.content || result?.text || JSON.stringify(result);
-            setAnalysisResult(resultText);
+
+            // Parse the resultText to create structured segments
+            const parsedSegments = parseTextAnalysis(resultText);
+            console.log("Parsed Segments:", parsedSegments); // Log parsed segments
+
+            setAnalysisResult({ type: 'text', segments: parsedSegments, rawResponse: resultText });
             toast({ title: 'Text analysis complete!' });
         } catch (err: any) {
             console.error(`Text Analysis Error:`, err);
@@ -353,21 +435,33 @@ export function AttentionAnalyzer() {
     }
   };
 
+
   const handleDownload = () => {
-    if (!analysisResult || !analysisMode) return;
+    if (!analysisResult) return;
 
     const link = document.createElement('a');
-    const fileExtension = 'txt'; // Always save analysis as text
+    const fileExtension = 'txt';
     let originalFileName = 'analysis';
-    if (inputMode === 'file' && uploadedFile) {
-        originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'file_analysis';
-    } else if (inputMode === 'text') {
-        originalFileName = 'text_analysis';
+    let contentToSave = '';
+
+    if (analysisResult.type === 'text') {
+        contentToSave = analysisResult.rawResponse; // Save the raw AI response for text
+         if (inputMode === 'file' && uploadedFile) {
+             originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'file_analysis';
+         } else if (inputMode === 'text') {
+             originalFileName = 'text_analysis';
+         }
+    } else if (analysisResult.type === 'image') {
+        contentToSave = analysisResult.result.description; // Save the description for image
+        if (inputMode === 'file' && uploadedFile) {
+            originalFileName = uploadedFile.name.replace(/\.[^/.]+$/, "") || 'image_analysis';
+        }
     }
+
 
     link.download = `attention_${originalFileName}.${fileExtension}`;
 
-    const blob = new Blob([analysisResult], { type: 'text/plain' });
+    const blob = new Blob([contentToSave], { type: 'text/plain' });
     link.href = URL.createObjectURL(blob);
 
     document.body.appendChild(link);
@@ -503,7 +597,7 @@ export function AttentionAnalyzer() {
                 Analyzing...
               </>
             ) : (
-                `Analyze ${inputMode === 'file' ? (fileType === 'image' ? 'Image' : 'Document') : 'Text'}`
+                `Analyze ${inputMode === 'file' ? (fileType === 'image' ? 'Image' : (fileType === 'text' ? 'Document' : 'File')) : 'Text'}`
             )}
         </Button>
           {/* Simple visual loading indicator */}
@@ -511,7 +605,7 @@ export function AttentionAnalyzer() {
 
 
       {/* Analysis Result Display */}
-      {analysisResult && analysisMode && (
+      {analysisResult && (
         <Card className="mt-6">
           <CardHeader className="flex flex-row items-center justify-between space-x-4">
             <div>
@@ -524,18 +618,42 @@ export function AttentionAnalyzer() {
             </Button>
           </CardHeader>
           <CardContent>
-            {analysisMode === 'image' && filePreview && uploadedFile && (
+            {analysisResult.type === 'image' && filePreview && uploadedFile && (
               <div className="mb-4 border rounded-lg overflow-hidden max-w-md mx-auto">
                  <Image src={filePreview} alt="Analyzed Image" width={500} height={500} objectFit="contain" data-ai-hint="uploaded image analysis" />
               </div>
             )}
-             <h3 className="font-semibold mb-2 text-lg">AI Analysis:</h3>
-              <Textarea
-                readOnly
-                value={analysisResult}
-                className="border rounded-lg p-4 bg-card text-card-foreground min-h-[200px] max-h-[400px] overflow-y-auto whitespace-pre-wrap text-sm"
-                aria-label="AI analysis result text"
-              />
+
+            {/* Conditional rendering based on analysis type */}
+            {analysisResult.type === 'text' && (
+              <>
+                <h3 className="font-semibold mb-2 text-lg">Engagement Heatmap:</h3>
+                <TextHeatmap segments={analysisResult.segments} />
+                <h3 className="font-semibold mt-4 mb-2 text-lg">AI Explanation:</h3>
+                 {/* Display raw explanation (adapt if AI separates explanation) */}
+                <Textarea
+                    readOnly
+                    value={analysisResult.rawResponse} // Display the raw response which should contain explanations
+                    className="border rounded-lg p-4 bg-card text-card-foreground min-h-[100px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm"
+                    aria-label="AI analysis explanation"
+                />
+              </>
+            )}
+
+            {analysisResult.type === 'image' && (
+              <>
+                <h3 className="font-semibold mb-2 text-lg">AI Analysis:</h3>
+                <Textarea
+                  readOnly
+                  value={analysisResult.result.description}
+                  className="border rounded-lg p-4 bg-card text-card-foreground min-h-[200px] max-h-[400px] overflow-y-auto whitespace-pre-wrap text-sm"
+                  aria-label="AI image analysis result text"
+                />
+                {/* Placeholder for image heatmap visualization if implemented */}
+                 {/* <div className="mt-4 text-sm text-muted-foreground">[Image heatmap visualization would go here]</div> */}
+              </>
+            )}
+
           </CardContent>
         </Card>
       )}

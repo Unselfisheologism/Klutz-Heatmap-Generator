@@ -92,19 +92,27 @@ body {
 
 /* Styles for text heatmap */
 .heatmap-engaging {
-  background-color: hsl(var(--primary)); /* Teal */
+  background-color: hsl(var(--primary) / 0.7); /* Teal with some transparency */
   color: hsl(var(--primary-foreground)); /* White */
-  padding: 0.1em 0.2em;
-  border-radius: 0.2em;
+  padding: 0.1em 0.3em;
+  border-radius: 0.25em;
   margin: 0 0.1em;
-  display: inline; /* Ensure spans behave correctly */
+  box-decoration-break: clone; /* Ensures background covers line breaks nicely */
+  -webkit-box-decoration-break: clone;
 }
 
 .heatmap-boring {
-  background-color: hsl(var(--secondary)); /* Light Grey */
+  background-color: hsl(var(--secondary) / 0.6); /* Light Grey with some transparency */
   color: hsl(var(--secondary-foreground)); /* Dark Grey */
-  padding: 0.1em 0.2em;
-  border-radius: 0.2em;
+  padding: 0.1em 0.3em;
+  border-radius: 0.25em;
   margin: 0 0.1em;
-  display: inline; /* Ensure spans behave correctly */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Ensure spans behave correctly and wrap */
+.heatmap-engaging,
+.heatmap-boring {
+  display: inline; /* Keep inline behavior for text flow */
 }
